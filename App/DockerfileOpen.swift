@@ -67,4 +67,10 @@ enum PendingDockerfileOpens {
         defer { urls.removeAll() }
         return urls
     }
+
+    /// Drops one buffered URL after a live notification delivered it, without
+    /// discarding other files still waiting for cold-launch drain.
+    static func remove(_ url: URL) {
+        urls.removeAll { $0 == url }
+    }
 }

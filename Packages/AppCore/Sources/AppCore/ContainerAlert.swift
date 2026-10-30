@@ -51,8 +51,9 @@ public struct ContainerAlert: Sendable, Hashable {
     public var body: String {
         switch kind {
         case .exited(let code):
+            // String(code) keeps the catalog key on %@ (not %lld) so zh-Hans matches.
             String(
-                localized: "\(containerName) on \(hostName) exited with code \(code).",
+                localized: "\(containerName) on \(hostName) exited with code \(String(code)).",
                 bundle: .module
             )
         case .outOfMemory:

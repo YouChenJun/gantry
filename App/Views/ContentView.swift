@@ -207,13 +207,13 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .gantryOpenComposeFile)) { note in
             if let url = note.object as? URL {
-                _ = PendingComposeOpens.drain()
+                PendingComposeOpens.remove(url)
                 composeRequest = ComposeFileRequest(url: url)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .gantryOpenDockerfile)) { note in
             if let url = note.object as? URL {
-                _ = PendingDockerfileOpens.drain()
+                PendingDockerfileOpens.remove(url)
                 buildRequest = DockerfileBuildRequest(url: url)
             }
         }

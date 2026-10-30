@@ -8,10 +8,7 @@ extension DockerClient {
     /// without a platform get a parallel `GET /images/{id}/json` round. Images
     /// whose inspect fails keep empty architecture (no badge, no error).
     public func listImages() async throws -> [ImageSummary] {
-        var images: [ImageSummary] = try await getJSON(
-            "/images/json",
-            query: [URLQueryItem(name: "manifests", value: "true")]
-        )
+        var images = try await listImageSummaries()
         try await fillMissingPlatforms(&images, inspecting: { _ in true })
         return images
     }
@@ -20,12 +17,23 @@ extension DockerClient {
     /// by `ids` (one inspect per id), for callers that need architectures for
     /// a subset rather than the whole library.
     public func listImages(platformsFor ids: Set<String>) async throws -> [ImageSummary] {
-        var images: [ImageSummary] = try await getJSON(
-            "/images/json",
-            query: [URLQueryItem(name: "manifests", value: "true")]
-        )
+        var images = try await listImageSummaries()
         try await fillMissingPlatforms(&images) { ids.contains($0.id) }
         return images
+    }
+
+    /// Prefer `manifests=true` (Engine API 1.48+) for cheap platform hints, but
+    /// fall back to a plain list when the daemon rejects the query so image
+    /// refresh does not fail open on older engines.
+    private func listImageSummaries() async throws -> [ImageSummary] {
+        do {
+            return try await getJSON(
+                "/images/json",
+                query: [URLQueryItem(name: "manifests", value: "true")]
+            )
+        } catch {
+            return try await getJSON("/images/json")
+        }
     }
 
     /// `GET /images/{id}/json` returning the raw body for the Inspect tab.

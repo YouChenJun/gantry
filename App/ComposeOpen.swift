@@ -35,6 +35,12 @@ enum PendingComposeOpens {
         defer { urls.removeAll() }
         return urls
     }
+
+    /// Drops one buffered URL after a live notification delivered it, without
+    /// discarding other files still waiting for cold-launch drain.
+    static func remove(_ url: URL) {
+        urls.removeAll { $0 == url }
+    }
 }
 
 /// App delegate handling file opens from Finder ("Open With → Gantry" and the

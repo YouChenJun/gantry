@@ -93,3 +93,13 @@ git push origin maint/accelerated
 
 `main` remains a mirror of upstream releases. Day-to-day fork work happens on
 `maint/accelerated`. Changing the GitHub default branch is optional.
+
+## CI runner note
+
+The Release workflow uses GitHub-hosted **`macos-26`** runners (Gantry’s
+deployment target is macOS 26 / Xcode 26+). Free-plan queues for those runners
+can sit in `queued` for a long time. If a run never starts, check
+[Actions](https://github.com/YouChenJun/gantry/actions) and your plan’s macOS
+minutes; do not switch the workflow to `macos-15` — that image lacks the macOS
+26 SDK the project needs.
+

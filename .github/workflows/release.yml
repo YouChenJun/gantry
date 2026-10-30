@@ -40,6 +40,8 @@ permissions:
   contents: write
 
 env:
+  # Prefer the pinned Xcode when the image has it; Select newest Xcode step
+  # overrides if the path is absent.
   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
   RELEASE_BRANCH: maint/accelerated
 
@@ -81,8 +83,28 @@ jobs:
             exit 1
           fi
 
-      - name: Show toolchain
-        run: xcodebuild -version
+      - name: Select newest Xcode
+        run: |
+          set -euo pipefail
+          ls /Applications | grep -E '^Xcode' || true
+          CANDIDATE=""
+          if [ -d /Applications/Xcode_26.4.1.app ]; then
+            CANDIDATE=/Applications/Xcode_26.4.1.app
+          else
+            CANDIDATE="$(ls -1d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1 || true)"
+          fi
+          if [ -z "${CANDIDATE}" ] && [ -d /Applications/Xcode.app ]; then
+            CANDIDATE=/Applications/Xcode.app
+          fi
+          if [ -z "${CANDIDATE}" ]; then
+            echo "::error::No Xcode.app found on the runner"
+            exit 1
+          fi
+          echo "Selecting ${CANDIDATE}"
+          sudo xcode-select -s "${CANDIDATE}/Contents/Developer"
+          echo "DEVELOPER_DIR=${CANDIDATE}/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i macos || true
 
       - name: Write Sparkle signing key
         id: sparkle

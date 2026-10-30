@@ -11,6 +11,25 @@ Commit messages — write the commit the way you want the changelog to read.
 Earlier entries were hand-written under **[Unreleased]** and stamped by
 `scripts/release.sh`.
 
+## [0.24.1](https://github.com/YouChenJun/gantry/compare/v0.24.0...v0.24.1) (2026-10-31)
+
+### Features
+
+* **i18n:** Simplified Chinese (zh-Hans) String Catalogs for App + AppCore alerts
+* **images:** badge foreign-architecture images (upstream #24)
+* **upstream:** track apple/container 1.6.1 (upstream #26)
+
+### Fixes
+
+* **setup:** only prompt apple/container setup when an Apple host is configured (upstream #17)
+* **setup:** prevent empty container setup sheet on launch (upstream #21)
+* **ui:** keep one main Gantry window across open routes (upstream #22)
+
+### CI
+
+* fork Release / Release Please workflows target `maint/accelerated`
+* unsigned `workflow_dispatch` path for GitHub Release zips without Sparkle secrets
+
 ## [0.24.0](https://github.com/getgantry/gantry/compare/v0.23.0...v0.24.0) (2026-08-01)
 
 

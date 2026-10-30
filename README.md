@@ -1,5 +1,8 @@
 # Gantry
 
+> **YouChenJun accelerated fork** — day-to-day work lives on [`maint/accelerated`](https://github.com/YouChenJun/gantry/tree/maint/accelerated)
+> (selected upstream PR fixes + zh-Hans). See [FORK.md](FORK.md) for merge list and how to cut releases.
+
 **Native Docker management for your Mac. Local and over SSH. Agent-ready with a built-in MCP server. Free, open source, no limits.**
 
 [![CI](https://github.com/getgantry/gantry/actions/workflows/ci.yml/badge.svg)](https://github.com/getgantry/gantry/actions/workflows/ci.yml)

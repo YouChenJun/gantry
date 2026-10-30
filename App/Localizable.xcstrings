@@ -9153,6 +9153,26 @@
           }
         }
       }
+    },
+    "Runs under emulation: image architecture differs from the host (%@).": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在模拟环境下运行：镜像架构与主机（%@）不同。"
+          }
+        }
+      }
+    },
+    "Runs under emulation: image architecture differs from the host (\\(hostArchitecture)).": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在模拟环境下运行：镜像架构与主机（\\(hostArchitecture)）不同。"
+          }
+        }
+      }
     }
   }
 }

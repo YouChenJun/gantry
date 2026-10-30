@@ -1,32 +1,22 @@
 name: Release
 
-# Auto-deploy: build, sign and publish a Gantry release, then update the
-# Sparkle appcast on main so existing installs auto-update.
+# Fork-adapted auto-deploy for YouChenJun/gantry (maint/accelerated).
+# Builds, optionally Sparkle-signs, publishes a GitHub Release, and updates
+# appcast.xml on maint/accelerated.
 #
-# Normally dispatched by the Release Please workflow once its release PR is
-# merged and the tag exists. It can also be started by hand — from the Actions
-# tab with a version input, or by pushing a version tag from main:
-#   git tag v0.13.0 && git push origin v0.13.0
+# Trigger:
+#   - workflow_dispatch with version (+ optional unsigned=true)
+#   - push of a v* tag
+#   - Release Please after a release PR merges (dispatches this workflow)
 #
-# The tag (or input) must match MARKETING_VERSION in the Xcode project;
-# release-please keeps the two in step via scripts/sync-version.sh.
+# Required for a signed Sparkle release:
+#   SPARKLE_PRIVATE_KEY — EdDSA private key from Sparkle `generate_keys -x`
+#                         (must match SUPublicEDKey in Info.plist; generate a
+#                         fork keypair — do not reuse upstream's private key)
 #
-# The GitHub release itself belongs to release-please: this workflow uploads
-# the build to it and only creates one when it is missing (a hand-pushed tag).
-#
-# Required repository secret:
-#   SPARKLE_PRIVATE_KEY  — the EdDSA private key that signs the appcast,
-#                          exported with Sparkle's `generate_keys -x`. It pairs
-#                          with SUPublicEDKey in Info.plist.
-#
-# Optional repository secret:
-#   HOMEBREW_TAP_DEPLOY_KEY — the private half of a write-enabled deploy key on
-#                          getgantry/homebrew-tap. When set, the cask is bumped
-#                          as soon as the release is published. A deploy key
-#                          rather than a PAT: it reaches exactly one repository,
-#                          belongs to no user account and does not expire.
-#                          The tap also bumps itself on a schedule, so this only
-#                          decides whether the bump is immediate.
+# Unsigned fallback: set workflow_dispatch input `unsigned` to true (or omit
+# SPARKLE_PRIVATE_KEY and pass unsigned=true). Builds and uploads the zip to a
+# GitHub Release; skips appcast signing/commit.
 
 on:
   push:
@@ -34,8 +24,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release, e.g. 0.13.0 (no leading v)'
+        description: 'Version to release, e.g. 0.24.1 (no leading v)'
         required: true
+      unsigned:
+        description: 'Skip Sparkle appcast signing; still upload GitHub Release zip'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: release
@@ -46,6 +41,7 @@ permissions:
 
 env:
   DEVELOPER_DIR: /Applications/Xcode_26.4.1.app/Contents/Developer
+  RELEASE_BRANCH: maint/accelerated
 
 jobs:
   release:
@@ -54,11 +50,11 @@ jobs:
     timeout-minutes: 45
     outputs:
       version: ${{ steps.ver.outputs.version }}
+      unsigned: ${{ steps.ver.outputs.unsigned }}
     steps:
       - uses: actions/checkout@v7
         with:
-          # Always release from main so the appcast commit lands there.
-          ref: main
+          ref: maint/accelerated
           fetch-depth: 0
 
       - name: Resolve version
@@ -66,19 +62,22 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             V="${{ github.event.inputs.version }}"
+            UNSIGNED="${{ github.event.inputs.unsigned }}"
           else
             V="${GITHUB_REF_NAME#v}"
+            UNSIGNED="false"
           fi
           V="${V#v}"
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          echo "Releasing Gantry $V"
+          echo "unsigned=${UNSIGNED:-false}" >> "$GITHUB_OUTPUT"
+          echo "Releasing Gantry $V (unsigned=${UNSIGNED:-false})"
 
       - name: Verify project version matches
         run: |
           PV=$(grep -m1 'MARKETING_VERSION' Gantry.xcodeproj/project.pbxproj \
             | sed -E 's/.*= (.*);/\1/')
           if [ "$PV" != "${{ steps.ver.outputs.version }}" ]; then
-            echo "::error::MARKETING_VERSION ($PV) != release version (${{ steps.ver.outputs.version }}). Bump it on main first."
+            echo "::error::MARKETING_VERSION ($PV) != release version (${{ steps.ver.outputs.version }}). Bump it on maint/accelerated first."
             exit 1
           fi
 
@@ -86,22 +85,29 @@ jobs:
         run: xcodebuild -version
 
       - name: Write Sparkle signing key
+        id: sparkle
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          UNSIGNED: ${{ steps.ver.outputs.unsigned }}
         run: |
+          if [ "$UNSIGNED" = "true" ]; then
+            echo "mode=unsigned" >> "$GITHUB_OUTPUT"
+            echo "::notice::Unsigned release requested — skipping Sparkle appcast."
+            exit 0
+          fi
           if [ -z "${SPARKLE_PRIVATE_KEY}" ]; then
-            echo "::error::SPARKLE_PRIVATE_KEY secret is not set. Export it with Sparkle's 'generate_keys -x' and add it as a repository secret."
+            echo "::error::SPARKLE_PRIVATE_KEY secret is not set. Re-run with unsigned=true for a GitHub Release zip only, or add a fork Sparkle keypair (see FORK.md)."
             exit 1
           fi
           printf '%s' "${SPARKLE_PRIVATE_KEY}" > "${RUNNER_TEMP}/sparkle_ed_key"
+          echo "mode=signed" >> "$GITHUB_OUTPUT"
 
       - name: Build, sign and generate appcast
         env:
-          # Ad-hoc sign during the build so nested frameworks (Sparkle) get a
-          # valid seal — generate_appcast validates the embedded signature.
-          # release.sh then re-signs the embedded mcp + app top level.
           RELEASE_XCODEBUILD_FLAGS: CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES DEVELOPMENT_TEAM=
           SPARKLE_ED_KEY_FILE: ${{ runner.temp }}/sparkle_ed_key
+          SKIP_APPCAST: ${{ steps.sparkle.outputs.mode == 'unsigned' && '1' || '0' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: scripts/release.sh "${{ steps.ver.outputs.version }}"
 
       - name: Attach the build to the GitHub release
@@ -110,120 +116,50 @@ jobs:
         run: |
           V="${{ steps.ver.outputs.version }}"
           if gh release view "v$V" >/dev/null 2>&1; then
-            # release-please already published the release and its notes; just
-            # add (or replace, on a re-run) the build.
             gh release upload "v$V" "dist/Gantry-$V.zip" --clobber
             echo "uploaded Gantry-$V.zip to the existing release v$V"
             exit 0
           fi
-          # No release yet — a hand-pushed tag. Fall back to the changelog for
-          # notes and create it.
           awk -v v="## [$V]" 'index($0, v) == 1 {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > "${RUNNER_TEMP}/notes.md"
-          [ -s "${RUNNER_TEMP}/notes.md" ] || echo "Gantry $V" > "${RUNNER_TEMP}/notes.md"
+          [ -s "${RUNNER_TEMP}/notes.md" ] || echo "Gantry $V (YouChenJun accelerated fork)" > "${RUNNER_TEMP}/notes.md"
           gh release create "v$V" "dist/Gantry-$V.zip" \
-            --title "Gantry $V" \
+            --title "Gantry $V (accelerated)" \
             --notes-file "${RUNNER_TEMP}/notes.md"
 
-      - name: Commit updated appcast and changelog to main
+      - name: Commit updated appcast and changelog to maint/accelerated
+        if: steps.sparkle.outputs.mode == 'signed'
         run: |
           V="${{ steps.ver.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # CHANGELOG.md is release-please's to write; it only changes here when
-          # release.sh had to stamp it for a hand-pushed tag.
           git add appcast.xml CHANGELOG.md
           if git diff --cached --quiet; then
             echo "No appcast/changelog changes to commit."
             exit 0
           fi
           git commit -m "Release $V: update appcast and changelog"
-          # Rebase + retry in case main advanced during the build.
           for attempt in 1 2 3; do
-            git fetch -q origin main
-            if git rebase origin/main && git push origin HEAD:main; then
-              echo "pushed appcast/changelog to main"; exit 0
+            git fetch -q origin maint/accelerated
+            if git rebase origin/maint/accelerated && git push origin HEAD:maint/accelerated; then
+              echo "pushed appcast/changelog to maint/accelerated"; exit 0
             fi
             git rebase --abort 2>/dev/null || true
             echo "push attempt $attempt hit a concurrent update; retrying"; sleep 5
           done
-          echo "::error::could not push appcast/changelog to main"; exit 1
+          echo "::error::could not push appcast/changelog to maint/accelerated"; exit 1
 
-      # Sparkle decides an update is newer by comparing sparkle:version
-      # (CFBundleVersion), not the marketing version. A release that forgets to
-      # increment the build number publishes fine and is silently never offered
-      # to anyone — this is the check that catches that before we call it shipped.
       - name: Verify the published appcast
+        if: steps.sparkle.outputs.mode == 'signed'
         run: scripts/verify-appcast.py "${{ steps.ver.outputs.version }}"
 
+  # Upstream bumps getgantry/homebrew-tap. This fork does not — leave the job
+  # as a no-op notice so a missing HOMEBREW_TAP_DEPLOY_KEY never looks broken.
   tap:
-    # Homebrew is the real update channel for Gantry — the app is ad-hoc signed,
-    # so Sparkle's in-app installer is refused by Gatekeeper and users update
-    # with `brew upgrade --cask gantry`. A release that doesn't reach the tap
-    # effectively doesn't reach anyone, which is how the tap ended up three
-    # versions behind.
-    name: Bump the Homebrew cask
+    name: Homebrew tap (skipped on fork)
     needs: release
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Check for the deploy key
-        id: key
-        env:
-          DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+      - name: Skip upstream tap bump
         run: |
-          if [ -n "$DEPLOY_KEY" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::HOMEBREW_TAP_DEPLOY_KEY is not set — the tap will pick this release up on its own schedule instead."
-          fi
-
-      - name: Bump version and sha256
-        if: steps.key.outputs.present == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
-          VERSION: ${{ needs.release.outputs.version }}
-        run: |
-          set -euo pipefail
-          ZIP="Gantry-${VERSION}.zip"
-
-          # Hash the asset that was actually published, not a local rebuild.
-          gh release download "v${VERSION}" --repo "$GITHUB_REPOSITORY" \
-            --pattern "$ZIP" --dir "$RUNNER_TEMP"
-          SHA="$(sha256sum "${RUNNER_TEMP}/${ZIP}" | cut -d' ' -f1)"
-          echo "$ZIP sha256=$SHA"
-
-          # A deploy key reaches exactly one repository, so it is checked out
-          # over SSH rather than with a token in the clone URL.
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/tap_key
-          chmod 600 ~/.ssh/tap_key
-          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/tap_key -o IdentitiesOnly=yes"
-
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git clone --depth 1 git@github.com:getgantry/homebrew-tap.git tap
-          cd tap
-
-          CASK=Casks/gantry.rb
-          CURRENT="$(sed -nE 's/^  version "(.*)"$/\1/p' "$CASK")"
-          if [ "$CURRENT" = "$VERSION" ]; then
-            echo "cask is already at $VERSION (the tap's own workflow got there first)"
-            exit 0
-          fi
-
-          sed -i -E \
-            -e "s/^  version \".*\"$/  version \"${VERSION}\"/" \
-            -e "s/^  sha256 \".*\"$/  sha256 \"${SHA}\"/" \
-            "$CASK"
-
-          # Refuse to push a cask that didn't actually take both values.
-          grep -q "version \"${VERSION}\"" "$CASK" && grep -q "sha256 \"${SHA}\"" "$CASK" \
-            || { echo "::error::cask rewrite did not apply"; exit 1; }
-
-          git add "$CASK"
-          git commit -m "gantry ${VERSION}"
-          git push origin HEAD:main
-          echo "bumped the cask ${CURRENT} -> ${VERSION}"
+          echo "::notice::Fork releases do not bump getgantry/homebrew-tap. Install from the GitHub Release zip or point your own tap at YouChenJun/gantry."

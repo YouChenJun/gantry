@@ -23,7 +23,7 @@ struct ArchBadge: View {
                 horizontalPadding: 5,
                 verticalPadding: 1
             )
-            .help("Runs under emulation: image architecture differs from the host (\(hostArchitecture)).")
+            .help(String(localized: "Runs under emulation: image architecture differs from the host (\(hostArchitecture))."))
         }
     }
 }

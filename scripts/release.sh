@@ -45,6 +45,7 @@ echo "==> Stamping CHANGELOG"
 # hand-driven release reaches it.
 CHANGELOG="$ROOT/CHANGELOG.md"
 DATE="$(date +%F)"
+export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-YouChenJun/gantry}"
 # Matches both "## [0.21.0] - 2026-06-29" (stamped here) and release-please's
 # "## [0.21.0](compare-link) (2026-06-29)".
 if grep -qE "^## \[$VERSION\][ (]" "$CHANGELOG"; then
@@ -60,8 +61,8 @@ else
     awk -v ver="$VERSION" -v date="$DATE" '
         /^## \[Unreleased\]$/ && !h { print; print ""; print "## [" ver "] - " date; print ""; h=1; next }
         /^\[Unreleased\]:/ && !l {
-            print "[Unreleased]: https://github.com/getgantry/gantry/compare/v" ver "...HEAD"
-            print "[" ver "]: https://github.com/getgantry/gantry/releases/tag/v" ver
+            print "[Unreleased]: https://github.com/" ENVIRON["GITHUB_REPOSITORY"] "/compare/v" ver "...HEAD"
+            print "[" ver "]: https://github.com/" ENVIRON["GITHUB_REPOSITORY"] "/releases/tag/v" ver
             l=1; next
         }
         { print }
@@ -92,20 +93,29 @@ ditto -c -k --keepParent "$APP" "$ZIP"
 echo "==> Generating Sparkle appcast"
 SPARKLE_BIN="$(ls -d "$BUILD"/SourcePackages/artifacts/sparkle/Sparkle/bin 2>/dev/null \
     || ls -d ~/Library/Developer/Xcode/DerivedData/Gantry-*/SourcePackages/artifacts/sparkle/Sparkle/bin | head -1)"
-PREFIX="https://github.com/getgantry/gantry/releases/download/v$VERSION/"
+REPO="${GITHUB_REPOSITORY:-YouChenJun/gantry}"
+PREFIX="https://github.com/$REPO/releases/download/v$VERSION/"
 # Locally the EdDSA key comes from the login Keychain; in CI, point
 # SPARKLE_ED_KEY_FILE at an exported key file (see .github/workflows/release.yml).
-if [ -n "${SPARKLE_ED_KEY_FILE:-}" ]; then
+# SKIP_APPCAST=1 builds the zip only (unsigned GitHub Release fallback).
+if [ "${SKIP_APPCAST:-}" = "1" ]; then
+    echo "==> Skipping Sparkle appcast (SKIP_APPCAST=1)"
+elif [ -n "${SPARKLE_ED_KEY_FILE:-}" ]; then
     "$SPARKLE_BIN/generate_appcast" --ed-key-file "$SPARKLE_ED_KEY_FILE" \
         --download-url-prefix "$PREFIX" "$DIST"
+    cp "$DIST/appcast.xml" "$ROOT/appcast.xml"
 else
     "$SPARKLE_BIN/generate_appcast" --download-url-prefix "$PREFIX" "$DIST"
+    cp "$DIST/appcast.xml" "$ROOT/appcast.xml"
 fi
-cp "$DIST/appcast.xml" "$ROOT/appcast.xml"
 
 echo "==> Done"
 echo "    app:     $APP"
 echo "    zip:     $ZIP"
-echo "    appcast:   $ROOT/appcast.xml (commit it to main)"
-echo "    changelog: $ROOT/CHANGELOG.md (stamped $VERSION; commit it to main)"
+if [ "${SKIP_APPCAST:-}" = "1" ]; then
+    echo "    appcast:   skipped"
+else
+    echo "    appcast:   $ROOT/appcast.xml (commit it to maint/accelerated)"
+fi
+echo "    changelog: $ROOT/CHANGELOG.md (stamped $VERSION; commit it to maint/accelerated)"
 echo "    release: gh release create v$VERSION dist/Gantry-$VERSION.zip --title 'Gantry $VERSION'"

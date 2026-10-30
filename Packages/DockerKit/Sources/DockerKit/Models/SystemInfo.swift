@@ -102,8 +102,10 @@ public struct SystemInfo: Hashable, Codable, Sendable {
     /// means unknown and never matches.
     public static func architecturesEquivalent(_ a: String, _ b: String) -> Bool {
         if a.isEmpty || b.isEmpty { return false }
+        let left = a.lowercased()
+        let right = b.lowercased()
         let aliases: [[String]] = [["amd64", "x86_64"], ["arm64", "aarch64"]]
-        for group in aliases where group.contains(a) && group.contains(b) { return true }
-        return a == b
+        for group in aliases where group.contains(left) && group.contains(right) { return true }
+        return left == right
     }
 }

@@ -11,6 +11,57 @@ Commit messages — write the commit the way you want the changelog to read.
 Earlier entries were hand-written under **[Unreleased]** and stamped by
 `scripts/release.sh`.
 
+## [0.25.0](https://github.com/YouChenJun/gantry/compare/v0.24.1...v0.25.0) (2026-10-31)
+
+
+### Features
+
+* adopt apple/container 1.1, automate releases, watch upstream ([04f013d](https://github.com/YouChenJun/gantry/commit/04f013d092261f43edff06bbc96191a8d58bd71d))
+* bring MCP server to full GUI parity ([f3c4c14](https://github.com/YouChenJun/gantry/commit/f3c4c14a00cd80cd9fe99149ec1c60fa8fca639d))
+* **containers:** add a debug shell for containers without one ([4d67470](https://github.com/YouChenJun/gantry/commit/4d67470e816a1b9273d7d265ac8e72e8138e7b05))
+* **containers:** add a debug shell for containers without one ([2e7ab25](https://github.com/YouChenJun/gantry/commit/2e7ab25a92205feff90b4c1bb6ceadad14713b69))
+* **containers:** boot containers from a custom kernel with custom boot args ([#14](https://github.com/YouChenJun/gantry/issues/14)) ([e9d2df2](https://github.com/YouChenJun/gantry/commit/e9d2df21cbe537aea305a1988548d30797807745))
+* **containers:** flag unix socket mounts in the create sheet ([c4f0f91](https://github.com/YouChenJun/gantry/commit/c4f0f91a9169e388d6c2ed487b8a569d6e6b9bd2))
+* enable cloudflare sharing on apple/container hosts ([df0ceb9](https://github.com/YouChenJun/gantry/commit/df0ceb97007f1c70d61da2e142e64a3d04a25d4e))
+* **images:** badge foreign-arch images ([e5c31b8](https://github.com/YouChenJun/gantry/commit/e5c31b8117a9122db6dd19294adf8ced423e61ae))
+* **machines:** boot machines with nested virtualization and a custom kernel ([9f56e64](https://github.com/YouChenJun/gantry/commit/9f56e64ea469571094d8e17ed23a961461d3451b))
+* share container ports publicly via cloudflare tunnel ([20efcda](https://github.com/YouChenJun/gantry/commit/20efcdac599ed0b9fc83f0b0317050eb558cda1c))
+* **volumes:** show per-volume size in the volumes list ([1d288eb](https://github.com/YouChenJun/gantry/commit/1d288ebb2a6d0e5bed1815ff0cce3541327ceccf))
+* **volumes:** sort the volumes list by name, size, driver or created ([cddcc82](https://github.com/YouChenJun/gantry/commit/cddcc828f3bc685cbaed01c3e0348c8d4718a4e3))
+
+
+### Fixes
+
+* **ci:** don't parse the release-please pr output with fromJSON ([5fafcbc](https://github.com/YouChenJun/gantry/commit/5fafcbc2736d16585c9d0bdd1a1d802ec52c5637))
+* **ci:** don't parse the release-please pr output with fromJSON ([5b84d69](https://github.com/YouChenJun/gantry/commit/5b84d6951310d90ccfaf692da4ccab5a8837eb9f))
+* **ci:** install the metal toolchain for the codeql runner ([8925619](https://github.com/YouChenJun/gantry/commit/8925619e2868f3a15c499c7181386e1780d37688))
+* **ci:** let codeql autobuild instead of driving xcodebuild ([c4cdb74](https://github.com/YouChenJun/gantry/commit/c4cdb7457e3c59b5cca30767ae50144c89f75c95))
+* **ci:** make the version sync work with gnu sed ([460fee7](https://github.com/YouChenJun/gantry/commit/460fee79990311dbd93eb406c076eb883041d25c))
+* **ci:** make the version sync work with gnu sed ([ba801d8](https://github.com/YouChenJun/gantry/commit/ba801d817243feea3c4a4a461013e72bfc1424e4))
+* **ci:** pin the xcode for codeql at workflow level ([46cc82c](https://github.com/YouChenJun/gantry/commit/46cc82c2e71336b02430906147c4521660cc810c))
+* **ci:** resolve the metal toolchain before the codeql build ([083ce38](https://github.com/YouChenJun/gantry/commit/083ce38717292c05700795819c2b6ca2c2d6fd38))
+* harden foreign-arch compare and localize remove dialogs ([2234a8b](https://github.com/YouChenJun/gantry/commit/2234a8bc4d44704e2b5d2f898dada1dc9d7661cb))
+* **mcp:** give the synthesised local host a stable id ([36491b7](https://github.com/YouChenJun/gantry/commit/36491b706b9ba89c119f0363cb3a8e128cb7582b))
+* **mcp:** send machine settings as key=value ([03393e1](https://github.com/YouChenJun/gantry/commit/03393e1b3c4120cd5a3fc9ab539ec1d4bbfb477f))
+* only prompt apple/container setup when an Apple host is configured ([a6088ef](https://github.com/YouChenJun/gantry/commit/a6088ef4143bad28c15a5bf00638d2e1e2a2c4ee))
+* pin cloudflared tunnel origin to 127.0.0.1 ([0505543](https://github.com/YouChenJun/gantry/commit/050554342c1d2ad07baef6bd01d7757ea50fa141))
+* review follow-ups for accelerated fork ([7ff3d6e](https://github.com/YouChenJun/gantry/commit/7ff3d6eef6a6d5fa60a1ef3aa05d9c557864db0e))
+* **ui:** keep detail panes pinned to the top ([2ecffd4](https://github.com/YouChenJun/gantry/commit/2ecffd479eaa44807c58c3d08441959fc4e83e81))
+* **ui:** keep detail panes pinned to the top ([db00c90](https://github.com/YouChenJun/gantry/commit/db00c9054ed2ea4c4beb0d6d06a5e9c2503913b4))
+
+
+### Documentation
+
+* add 0.18.1 changelog entry for cloudflared 127.0.0.1 fix ([ef561d2](https://github.com/YouChenJun/gantry/commit/ef561d202e74dbb45695a51554a7adcfeb0bcb00))
+* add 0.18.2 changelog entry for apple/container cloudflare sharing ([32687ea](https://github.com/YouChenJun/gantry/commit/32687ea64092bc463c6d96c5454f03393e0d570b))
+* cover 1.1 machine options, release-please and the upstream watcher ([ce2fd7e](https://github.com/YouChenJun/gantry/commit/ce2fd7e1acd5230cbb04885bfb3407245e86eb91))
+* document cloudflare tunnel port sharing in readme ([8d855e7](https://github.com/YouChenJun/gantry/commit/8d855e73957ae5cd12c541b381c26745dd1facc9))
+* document the squash-merge flow ([#11](https://github.com/YouChenJun/gantry/issues/11)) ([8f934c1](https://github.com/YouChenJun/gantry/commit/8f934c1155da2393d30f87334b0f4172c7947c44))
+* drop the unreleased notes now generated into 0.22.0 ([40f1e97](https://github.com/YouChenJun/gantry/commit/40f1e97eb2a9d2bf2cbf2f1feb084e9fc6903f23))
+* **readme:** note volume sizes and sorting ([2c626a6](https://github.com/YouChenJun/gantry/commit/2c626a62fc73e88acd3cb04c8753cab82560fd1d))
+* **readme:** use descriptive anchor text for website link ([9041695](https://github.com/YouChenJun/gantry/commit/9041695479893aa08cfb26f3f537ac67871aa8c7))
+* tidy the 0.23.0 changelog ([db770e8](https://github.com/YouChenJun/gantry/commit/db770e8f76d08817a81d102d516bf4f9b071b9f5))
+
 ## [0.24.1](https://github.com/YouChenJun/gantry/compare/v0.24.0...v0.24.1) (2026-10-31)
 
 ### Features
